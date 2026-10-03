@@ -16,3 +16,4 @@ A LangGraph-powered multi-modal AI travel assistant that intelligently routes be
 - Streamlit
 - ChromaDB
 - OpenAI
+- grok

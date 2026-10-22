@@ -1,5 +1,18 @@
 # 🌍 Multi-Modal Travel Agent
 
+## Recruiter quick view
+
+**Problem:** Travel research often requires switching between destination context, search results, weather and images.
+
+**Solution:** A Streamlit travel assistant orchestrated with LangGraph that routes questions between retrieval and web search and brings together weather and image context.
+
+**What to inspect:** Conditional routing, tool integrations, vector retrieval, error handling and the UI workflow described below.
+
+**Repository navigation:** The application source is in the `multi-modal-travel-agent/` directory. A root-level ZIP archive is also present; use the source directory rather than treating the ZIP as the canonical code.
+
+**Status note:** This description reflects the documented implementation. Live deployment, automated test coverage and response accuracy have not been independently verified here.
+
+
 <p align="center">
   <b>An AI-powered travel assistant that brings travel information together through intelligent search, knowledge retrieval, and contextual insights.</b>
 </p>

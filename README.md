@@ -24,6 +24,22 @@
   <img src="https://img.shields.io/badge/ChromaDB-Vector%20Database-2E8B57?style=for-the-badge" />
 </p>
 
+## Canonical source and exact setup
+
+The runnable source is in [`multi-modal-travel-agent/`](multi-modal-travel-agent/). Its [app-specific README](multi-modal-travel-agent/README.md) is the authoritative guide for dependencies and model configuration. From the repository root:
+
+```bash
+cd multi-modal-travel-agent
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export GROQ_API_KEY="your_groq_key"
+export GROQ_EMBEDDING_MODEL="nomic-embed-text-v1.5"
+streamlit run app.py
+```
+
+Optional: set `TAVILY_API_KEY` for Tavily search; otherwise the implementation describes a Wikipedia fallback. The app-specific README documents Groq Llama 3.3 and a fallback embedding strategy. Verify provider model access and API compatibility before claiming successful execution. [View workflow graph](multi-modal-travel-agent/graph.png).
+
 ## ✨ About the Project
 
 **Multi-Modal Travel Agent** is an AI-powered application designed to streamline travel information discovery using modern AI orchestration techniques.

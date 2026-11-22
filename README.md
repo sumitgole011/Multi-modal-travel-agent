@@ -10,7 +10,7 @@
 
 **Repository navigation:** The application source is in the `multi-modal-travel-agent/` directory. A root-level ZIP archive is also present; use the source directory rather than treating the ZIP as the canonical code.
 
-**Status note:** This description reflects the documented implementation. Live deployment, automated test coverage and response accuracy have not been independently verified here.
+**Test coverage:** GitHub Actions runs the repository smoke checks and two offline tests of the compiled LangGraph workflow.
 
 
 <p align="center">
@@ -39,6 +39,21 @@ streamlit run app.py
 ```
 
 Optional: set `TAVILY_API_KEY` for Tavily search; otherwise the implementation describes a Wikipedia fallback. The app-specific README documents Groq Llama 3.3 and a fallback embedding strategy. Verify provider model access and API compatibility before claiming successful execution. [View workflow graph](multi-modal-travel-agent/graph.png).
+
+## Offline workflow examples
+
+| Example request | Expected workflow result |
+| --- | --- |
+| Tell me about Paris | Uses the local city record, skips web search, and includes the itinerary, images, and simulated forecast. |
+| Tell me about Lisbon | Searches the web after a local miss. A simulated weather timeout leaves the forecast empty while preserving the search-based itinerary and image results. |
+
+These tests run with an in-memory city index and simulated provider responses and require no API keys. Run them from the repository root after installing the app dependencies.
+
+```bash
+PYTHONPATH=multi-modal-travel-agent python -m unittest discover -s tests -v
+```
+
+[Workflow tests](tests/test_graph_routes.py) · [GitHub Actions](https://github.com/sumitgole011/Multi-modal-travel-agent/actions/workflows/source-checks.yml)
 
 ## ✨ About the Project
 

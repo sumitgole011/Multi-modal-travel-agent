@@ -1,0 +1,80 @@
+"""Run real LangGraph routes with an in-memory index and offline providers."""
+
+from copy import deepcopy
+from importlib import import_module
+import os
+import unittest
+from unittest.mock import Mock, patch
+
+from travel_agent.data import INITIAL_CITY_RECORDS, LocalCityStore
+
+
+class TravelGraphTests(unittest.TestCase):
+    def setUp(self):
+        self.store = LocalCityStore(memory_records=deepcopy(INITIAL_CITY_RECORDS))
+        self.enterContext(patch.dict(os.environ, {
+            "GROQ_API_KEY": "",
+            "LANGCHAIN_TRACING_V2": "false",
+            "LANGSMITH_TRACING": "false",
+        }))
+        with patch.object(LocalCityStore, "build", return_value=self.store):
+            graph = import_module("travel_agent.graph")
+        self.enterContext(patch.object(graph, "STORE", self.store))
+        self.enterContext(patch.object(graph, "get_llm", side_effect=RuntimeError("Offline test")))
+        self.search = Mock()
+        self.enterContext(patch.dict(graph.TOOLS, {"web_search": self.search}))
+        self.weather = self.enterContext(patch.object(graph, "get_weather"))
+        self.workflow = graph.build_graph()
+
+    def ask(self, question):
+        return self.workflow.invoke(
+            {"query": question},
+            config={"configurable": {"thread_id": self._testMethodName}},
+        )
+
+    def test_known_city_uses_local_index_and_skips_web_search(self):
+        forecast = [{
+            "date": "2026-11-23",
+            "temperature_c": 12.5,
+            "condition": "Clear sky",
+            "humidity": 60,
+            "precipitation_probability": 0,
+        }]
+        self.weather.return_value = forecast
+
+        state = self.ask("Tell me about Paris")
+
+        self.assertEqual(state["city"], "Paris")
+        self.assertEqual(state["route"], "internal")
+        self.search.invoke.assert_not_called()
+        self.weather.assert_called_once_with("Paris")
+        response = state["final_response"]
+        self.assertTrue(response["city_summary"].startswith(self.store.get("Paris")["summary"]))
+        self.assertIn("Suggested day plan:", response["city_summary"])
+        self.assertEqual(response["image_urls"], self.store.get("Paris")["image_urls"])
+        self.assertEqual(response["weather_forecast"], forecast)
+
+    def test_missing_city_uses_web_search_and_keeps_plan_on_weather_timeout(self):
+        self.assertIsNone(self.store.get("Lisbon"))
+        snippet = "Lisbon is known for Alfama, its hilltop viewpoints, and the waterfront in Belem."
+        image_url = "https://example.com/lisbon.jpg"
+        self.search.invoke.return_value = {
+            "matched_city": "Lisbon",
+            "source": "test",
+            "sources": [{"snippet": snippet}],
+            "image_urls": [image_url],
+        }
+        self.weather.side_effect = TimeoutError("Simulated provider timeout")
+
+        state = self.ask("Tell me about Lisbon")
+
+        self.assertEqual(state["city"], "Lisbon")
+        self.assertEqual(state["route"], "web")
+        self.search.invoke.assert_called_once_with({"city": "Lisbon"})
+        self.weather.assert_called_once_with("Lisbon")
+        self.assertEqual(state["errors"], ["Weather forecast is currently unavailable."])
+        response = state["final_response"]
+        self.assertIn(snippet, response["city_summary"])
+        self.assertIn("Suggested day plan:", response["city_summary"])
+        self.assertEqual(response["image_urls"], [image_url])
+        self.assertEqual(response["weather_forecast"], [])

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import os
-import random
-from datetime import date, timedelta
 from urllib.parse import quote
 
 import requests
@@ -42,23 +40,7 @@ WEATHER_CODES = {
 }
 
 
-def _fallback_weather(city: str, days: int = 7, date_range: str = "next week") -> list[dict]:
-    seed = sum(ord(ch) for ch in city + date_range)
-    rng = random.Random(seed)
-    start = date.today() + timedelta(days=1)
-    conditions = ["Sunny", "Cloudy", "Light rain", "Clear", "Breezy"]
-    return [
-        {
-            "date": (start + timedelta(days=offset)).isoformat(),
-            "temperature_c": round(rng.uniform(14, 31), 1),
-            "condition": rng.choice(conditions),
-            "humidity": rng.randint(45, 82),
-        }
-        for offset in range(days)
-    ]
-
-
-def fetch_weather(city: str, days: int = 7, date_range: str = "next week") -> list[dict]:
+def fetch_weather(city: str, days: int = 7) -> list[dict]:
     geocode_response = SESSION.get(
         "https://geocoding-api.open-meteo.com/v1/search",
         params={"name": city, "count": 1, "language": "en", "format": "json"},
@@ -107,13 +89,6 @@ def fetch_weather(city: str, days: int = 7, date_range: str = "next week") -> li
             }
         )
     return forecast
-
-
-def weather(city: str, days: int = 7, date_range: str = "next week") -> list[dict]:
-    try:
-        return fetch_weather(city, days=days, date_range=date_range)
-    except Exception:
-        return _fallback_weather(city, days=days, date_range=date_range)
 
 
 def _tavily_search(city: str) -> dict | None:

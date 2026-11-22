@@ -13,7 +13,8 @@ from langgraph.graph import END, StateGraph
 
 from .data import LocalCityStore, known_city_names, normalize_city
 from .models import TravelResponse, TravelState
-from .tools import weather, web_search
+from .tools import fetch_weather as get_weather
+from .tools import web_search
 
 
 STORE = LocalCityStore.build()
@@ -326,9 +327,9 @@ def enrich_itinerary(state: TravelState) -> TravelState:
 
 def fetch_weather(state: TravelState) -> TravelState:
     try:
-        return {"weather_forecast": weather(state["city"], date_range=state.get("date_range", "next 7 days"))}
-    except Exception as exc:
-        return {"errors": [f"Weather lookup failed: {exc}"], "weather_forecast": []}
+        return {"weather_forecast": get_weather(state["city"])}
+    except Exception:
+        return {"errors": ["Weather forecast is currently unavailable."], "weather_forecast": []}
 
 
 def fetch_images(state: TravelState) -> TravelState:

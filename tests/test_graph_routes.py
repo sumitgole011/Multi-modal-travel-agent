@@ -78,3 +78,26 @@ class TravelGraphTests(unittest.TestCase):
         self.assertIn("Suggested day plan:", response["city_summary"])
         self.assertEqual(response["image_urls"], [image_url])
         self.assertEqual(response["weather_forecast"], [])
+
+    def test_weather_question_can_switch_to_a_city_outside_local_index(self):
+        self.weather.return_value = []
+        self.ask("Tell me about Paris")
+        self.weather.reset_mock()
+        self.search.invoke.return_value = {}
+
+        state = self.ask("What's the weather in Lisbon?")
+
+        self.assertEqual(state["city"], "Lisbon")
+        self.assertFalse(state["refresh_weather_only"])
+        self.weather.assert_called_once_with("Lisbon")
+
+    def test_weather_followup_without_destination_reuses_current_city(self):
+        self.weather.return_value = []
+        self.ask("Tell me about Paris")
+        self.weather.reset_mock()
+
+        state = self.ask("What about the weather next week?")
+
+        self.assertEqual(state["city"], "Paris")
+        self.assertTrue(state["refresh_weather_only"])
+        self.weather.assert_called_once_with("Paris")

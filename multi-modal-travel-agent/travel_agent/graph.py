@@ -148,9 +148,12 @@ def parse_request(state: TravelState) -> TravelState:
         previous_city and any(token in lower_query for token in ["next week", "weather", "forecast"])
     )
 
-    if refresh_weather_only and not any(city in lower_query for city in known_city_names()):
+    explicit_destination = re.search(r"\b(?:weather|forecast)\s+in\s+(.+)", query, re.IGNORECASE)
+    if (refresh_weather_only and not explicit_destination
+            and not any(city in lower_query for city in known_city_names())):
         return {"city": previous_city, "date_range": query, "refresh_weather_only": True}
 
+    fallback_query = explicit_destination.group(1) if explicit_destination else query
     try:
         llm = get_llm(temperature=0)
         today = date.today().isoformat()
@@ -166,10 +169,10 @@ def parse_request(state: TravelState) -> TravelState:
             ]
         )
         parsed = json.loads(response.content)
-        city = _sanitize_destination(str(parsed.get("city") or _fallback_city(query)).strip(), query)
+        city = _sanitize_destination(str(parsed.get("city") or _fallback_city(fallback_query)).strip(), fallback_query)
         date_range = str(parsed.get("date_range") or "next 7 days").strip()
     except Exception:
-        city = _sanitize_destination(_fallback_city(query), query)
+        city = _sanitize_destination(_fallback_city(fallback_query), fallback_query)
         date_range = "next 7 days"
 
     return {"city": city, "date_range": date_range, "refresh_weather_only": False}

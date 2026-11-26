@@ -330,7 +330,7 @@ def enrich_itinerary(state: TravelState) -> TravelState:
 
 def fetch_weather(state: TravelState) -> TravelState:
     try:
-        return {"weather_forecast": get_weather(state["city"])}
+        return {"weather_forecast": get_weather(state["city"]), "errors": []}
     except Exception:
         return {"errors": ["Weather forecast is currently unavailable."], "weather_forecast": []}
 

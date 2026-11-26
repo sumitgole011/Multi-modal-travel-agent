@@ -101,3 +101,20 @@ class TravelGraphTests(unittest.TestCase):
         self.assertEqual(state["city"], "Paris")
         self.assertTrue(state["refresh_weather_only"])
         self.weather.assert_called_once_with("Paris")
+
+    def test_successful_weather_followup_clears_previous_warning(self):
+        forecast = [{
+            "date": "2026-11-26",
+            "temperature_c": 14.0,
+            "condition": "Clear sky",
+            "humidity": 60,
+            "precipitation_probability": 0,
+        }]
+        self.weather.side_effect = [TimeoutError("Provider timeout"), forecast]
+
+        failed = self.ask("Tell me about Paris")
+        self.assertEqual(failed["errors"], ["Weather forecast is currently unavailable."])
+
+        recovered = self.ask("What about the weather next week?")
+        self.assertEqual(recovered["errors"], [])
+        self.assertEqual(recovered["final_response"]["weather_forecast"], forecast)

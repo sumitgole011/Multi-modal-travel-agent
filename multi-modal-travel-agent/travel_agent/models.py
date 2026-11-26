@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import operator
 from typing import Annotated, Any, Literal, TypedDict
 
 from langgraph.graph.message import add_messages
@@ -32,4 +31,4 @@ class TravelState(TypedDict, total=False):
     weather_forecast: list[dict[str, Any]]
     image_urls: list[str]
     final_response: dict[str, Any]
-    errors: Annotated[list[str], operator.add]
+    errors: list[str]

@@ -266,7 +266,7 @@ def summarize_search_results(state: TravelState) -> TravelState:
             f"I could not verify that the live search result is about {state['city']}. "
             "Please try a more specific destination name."
         )
-        return {"city_summary": summary, "image_urls": image_urls}
+        return {"city_summary": summary, "image_urls": []}
 
     if not _has_groq_key():
         summary = snippets or f"Live search did not return a detailed summary for {state['city']}."
@@ -374,7 +374,7 @@ def _destination_matches(city: str, matched_city: str, snippets: str, source_url
     city_tokens = [token for token in city_norm.split() if len(token) > 2]
     if not city_tokens:
         return False
-    if city_norm and (city_norm in matched_norm or matched_norm in city_norm):
+    if matched_norm and (city_norm in matched_norm or matched_norm in city_norm):
         return True
     if all(token in matched_norm for token in city_tokens):
         return True

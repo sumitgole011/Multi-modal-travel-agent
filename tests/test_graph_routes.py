@@ -118,3 +118,20 @@ class TravelGraphTests(unittest.TestCase):
         recovered = self.ask("What about the weather next week?")
         self.assertEqual(recovered["errors"], [])
         self.assertEqual(recovered["final_response"]["weather_forecast"], forecast)
+
+    def test_unverified_search_results_do_not_supply_images_or_create_a_city_record(self):
+        self.weather.return_value = []
+        for match in ("", "Madrid"):
+            with self.subTest(match=match):
+                self.search.invoke.return_value = {
+                    "matched_city": match,
+                    "source": "test",
+                    "sources": [{"snippet": "Madrid has the Prado Museum."}],
+                    "image_urls": ["https://example.com/madrid.jpg"],
+                }
+
+                state = self.ask("Tell me about Lisbon")
+
+                self.assertIn("could not verify", state["final_response"]["city_summary"])
+                self.assertEqual(state["final_response"]["image_urls"], [])
+                self.assertIsNone(self.store.get("Lisbon"))

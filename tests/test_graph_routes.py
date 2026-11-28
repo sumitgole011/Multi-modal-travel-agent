@@ -135,3 +135,20 @@ class TravelGraphTests(unittest.TestCase):
                 self.assertIn("could not verify", state["final_response"]["city_summary"])
                 self.assertEqual(state["final_response"]["image_urls"], [])
                 self.assertIsNone(self.store.get("Lisbon"))
+
+    def test_verified_search_snippet_is_used_when_summary_model_is_unavailable(self):
+        snippet = "Lisbon is known for Alfama and the waterfront in Belem."
+        self.search.invoke.return_value = {
+            "matched_city": "Lisbon",
+            "source": "test",
+            "sources": [{"snippet": snippet}],
+            "image_urls": [],
+        }
+        self.weather.return_value = []
+
+        with patch.dict(os.environ, {"GROQ_API_KEY": "offline-test-key"}):
+            state = self.ask("Tell me about Lisbon")
+
+        self.assertEqual(state["final_response"]["city_summary"], snippet)
+        self.assertEqual(self.store.get("Lisbon")["summary"], snippet)
+        self.weather.assert_called_once_with("Lisbon")

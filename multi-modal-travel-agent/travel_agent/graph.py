@@ -203,30 +203,36 @@ def retrieve_internal_summary(state: TravelState) -> TravelState:
 
 
 def plan_search_tool(state: TravelState) -> TravelState:
-    if not _has_groq_key():
-        return {
-            "messages": [
-                AIMessage(
-                    content="",
-                    tool_calls=[
-                        {
-                            "name": "web_search",
-                            "args": {"city": _sanitize_destination(state["city"])},
-                            "id": "fallback-search-call",
-                        }
-                    ],
-                )
-            ]
-        }
+    city = _sanitize_destination(state["city"])
+    if _has_groq_key():
+        try:
+            llm_with_tools = get_llm(temperature=0).bind_tools([web_search])
+            response = llm_with_tools.invoke(
+                [
+                    SystemMessage(content=SEARCH_TOOL_PROMPT),
+                    HumanMessage(content=f"Find travel information for {city}."),
+                ]
+            )
+            if response.tool_calls:
+                return {"messages": [response]}
+        except Exception:
+            # The web search tool can look up the destination without the model.
+            pass
 
-    llm_with_tools = get_llm(temperature=0).bind_tools([web_search])
-    response = llm_with_tools.invoke(
-        [
-            SystemMessage(content=SEARCH_TOOL_PROMPT),
-            HumanMessage(content=f"Find travel information for {_sanitize_destination(state['city'])}."),
+    return {
+        "messages": [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "web_search",
+                        "args": {"city": city},
+                        "id": "fallback-search-call",
+                    }
+                ],
+            )
         ]
-    )
-    return {"messages": [response]}
+    }
 
 
 def execute_search_tools(state: TravelState) -> TravelState:
@@ -268,18 +274,20 @@ def summarize_search_results(state: TravelState) -> TravelState:
         )
         return {"city_summary": summary, "image_urls": []}
 
-    if not _has_groq_key():
-        summary = snippets or f"Live search did not return a detailed summary for {state['city']}."
-    else:
-        response = get_llm(temperature=0.2).invoke(
-            [
-                SystemMessage(
-                    content=SUMMARY_PROMPT
-                ),
-                HumanMessage(content=f"Requested destination: {state['city']}\nSearch JSON: {raw}"),
-            ]
-        )
-        summary = response.content
+    summary = snippets or f"Live search did not return a detailed summary for {state['city']}."
+    if _has_groq_key():
+        try:
+            response = get_llm(temperature=0.2).invoke(
+                [
+                    SystemMessage(content=SUMMARY_PROMPT),
+                    HumanMessage(content=f"Requested destination: {state['city']}\nSearch JSON: {raw}"),
+                ]
+            )
+            if isinstance(response.content, str) and response.content.strip():
+                summary = response.content.strip()
+        except Exception:
+            # A verified search result remains useful when the model is unavailable.
+            pass
 
     record = {
         "city": state["city"].title(),
